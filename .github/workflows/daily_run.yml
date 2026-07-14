@@ -1,0 +1,34 @@
+name: Daily Stock Trend Pipeline
+
+# Automates the end-to-end ETL job so market trend data/charts refresh
+# with minimal manual intervention.
+on:
+  schedule:
+    - cron: "30 21 * * 1-5"   # 9:30 PM UTC, Mon–Fri (~market close, US)
+  workflow_dispatch: {}        # allow manual trigger from the Actions tab
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ETL pipeline
+        run: python main.py
+
+      - name: Commit updated data & charts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/*.csv outputs/*.png
+          git diff --cached --quiet || git commit -m "Automated data refresh: $(date -u +'%Y-%m-%d')"
+          git push
