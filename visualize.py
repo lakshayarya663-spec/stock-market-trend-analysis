@@ -13,6 +13,7 @@ import pandas as pd
 from config import OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
+
 plt.style.use("seaborn-v0_8-darkgrid")
 
 
@@ -48,7 +49,6 @@ def plot_moving_averages(df: pd.DataFrame, ticker: str, save: bool = True):
     ax.plot(sub["Date"], sub["Adj Close"], label="Adj Close", linewidth=1.5)
     for ma_col in [c for c in sub.columns if c.startswith("MA_")]:
         ax.plot(sub["Date"], sub[ma_col], label=ma_col, linewidth=1.2, alpha=0.85)
-
     ax.set_title(f"{ticker}: Price & Moving Averages", fontsize=14, weight="bold")
     ax.set_xlabel("Date")
     ax.set_ylabel("Price ($)")
@@ -69,10 +69,17 @@ def plot_sector_volatility(df: pd.DataFrame, save: bool = True):
     fig, ax = plt.subplots(figsize=(12, 6))
     sectors = sorted(latest["Sector"].unique())
     data = [latest.loc[latest["Sector"] == s, "Volatility"].dropna() for s in sectors]
-    ax.boxplot(data, labels=sectors, showfliers=False)
+
+    # NOTE: boxplot's `labels` kwarg was deprecated in Matplotlib 3.9 and
+    # removed entirely in 3.11 (renamed to `tick_labels`). Setting the tick
+    # labels afterwards via set_xticks/set_xticklabels works identically
+    # across every Matplotlib version, so we avoid the kwarg entirely.
+    ax.boxplot(data, showfliers=False)
+    ax.set_xticks(range(1, len(sectors) + 1))
+    ax.set_xticklabels(sectors, rotation=30, ha="right")
+
     ax.set_title("Volatility Distribution by Sector (Last ~60 Trading Days)", fontsize=14, weight="bold")
     ax.set_ylabel("Annualized Volatility")
-    plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
     fig.tight_layout()
 
     if save:
